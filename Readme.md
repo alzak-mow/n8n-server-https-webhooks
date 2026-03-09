@@ -47,4 +47,4 @@ openssl rand -hex 32  # Для N8N_USER_MANAGEMENT_JWT_SECRET
 4. **Webhooks**
    URL вебхуков в воркфлоу должны быть вида `https://ВАШ_ДОМЕН/webhook/...` (то же значение, что в `WEBHOOK_URL` в `.env`).
 
-**Важно в `.env`:** при доступе через Caddy указывайте домен без порта 5678: `N8N_HOST=домен`, `N8N_EDITOR_BASE_URL=https://домен`, `WEBHOOK_URL=https://домен`. Переменная `N8N_DOMAIN` — только hostname (без порта) для Caddy.
+**Важно в `.env`:** при доступе через Caddy указывайте домен без порта 5678: `N8N_HOST=домен`, `N8N_EDITOR_BASE_URL=https://домен`, `WEBHOOK_URL=https://домен`. Переменная `N8N_DOMAIN` — hostname для Caddy (без порта); если не задана, подставляется `N8N_HOST`. При использовании нестандартного HTTPS-порта (например 8443) задайте `N8N_DOMAIN=домен` без порта, иначе Caddy может не запуститься.
