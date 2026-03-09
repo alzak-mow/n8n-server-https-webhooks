@@ -138,8 +138,9 @@ services:
       - "${CADDY_HTTPS_PORT:-443}:443" # HTTPS
       - "${CADDY_HTTPS_PORT:-443}:443/udp" # HTTP/3 (QUIC)
     environment:
-      - N8N_DOMAIN=${N8N_HOST}
-      - ACME_EMAIL=admin@${N8N_HOST}  # Email для Let's Encrypt уведомлений
+      # N8N_DOMAIN — только hostname без порта (для Caddy server block)
+      - N8N_DOMAIN=${N8N_DOMAIN}
+      - ACME_EMAIL=admin@${N8N_DOMAIN}
     volumes:
       - ./caddy/Caddyfile.server:/etc/caddy/Caddyfile:ro
       - caddy_data:/data
