@@ -1,0 +1,17 @@
+# Environment variables
+.env
+
+# Local data
+data/
+n8n/demo-data/
+shared/
+
+# Docker volumes (если используете локальные пути)
+volumes/
+
+# Logs
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db

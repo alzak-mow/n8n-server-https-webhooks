@@ -1,0 +1,67 @@
+# Получаем домен из переменной окружения
+{$N8N_DOMAIN} {
+    # Настройка логов
+    log {
+        output stdout
+        level INFO
+    }
+    
+    # Автоматический HTTPS с Let's Encrypt
+    tls {
+        protocols tls1.2 tls1.3
+        curves x25519 secp384r1 secp256r1
+    }
+    
+    # Прокси на n8n
+    handle_path /rest/* {
+        reverse_proxy n8n:5678
+    }
+    
+    handle_path /webhook/* {
+        reverse_proxy n8n:5678
+    }
+    
+    handle_path /webhook-test/* {
+        reverse_proxy n8n:5678
+    }
+    
+    handle_path /api/* {
+        reverse_proxy n8n:5678
+    }
+    
+    handle_path /healthz {
+        reverse_proxy n8n:5678
+    }
+    
+    # Основной прокси для всего остального
+    handle {
+        reverse_proxy n8n:5678 {
+            # Настройки для WebSocket поддержки
+            header_up Host {host}
+            header_up X-Real-IP {remote_host}
+            header_up X-Forwarded-For {remote_host}
+            header_up X-Forwarded-Proto {scheme}
+            
+            # Таймауты для long-lived соединений
+            flush_interval -1
+        }
+    }
+    
+    # Сжатие
+    encode gzip zstd
+    
+    # Заголовки безопасности
+    header {
+        Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+        X-Content-Type-Options nosniff
+        X-Frame-Options DENY
+        X-XSS-Protection "1; mode=block"
+        Referrer-Policy "strict-origin-when-cross-origin"
+        -Server
+    }
+}
+
+# Обработка HTTP -> HTTPS редиректа
+:80 {
+    redir https://{$N8N_DOMAIN}{uri} permanent
+}
