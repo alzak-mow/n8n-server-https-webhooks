@@ -38,6 +38,7 @@ x-n8n: &service-n8n
     - N8N_PROTOCOL=https
     - N8N_EDITOR_BASE_URL=${N8N_EDITOR_BASE_URL}
     - WEBHOOK_URL=${WEBHOOK_URL}
+    - N8N_SECURE_COOKIE=${N8N_SECURE_COOKIE:-true}
     
     # Timezone
     - TZ=${TZ:-Europe/Moscow}
