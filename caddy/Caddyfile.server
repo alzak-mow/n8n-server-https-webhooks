@@ -12,24 +12,24 @@
         curves x25519 secp384r1 secp256r1
     }
     
-    # Прокси на n8n
-    handle_path /rest/* {
+    # Прокси на n8n (handle без _path — путь передаётся в n8n целиком, иначе вебхуки не срабатывают)
+    handle /rest/* {
         reverse_proxy n8n:5678
     }
     
-    handle_path /webhook/* {
+    handle /webhook/* {
         reverse_proxy n8n:5678
     }
     
-    handle_path /webhook-test/* {
+    handle /webhook-test/* {
         reverse_proxy n8n:5678
     }
     
-    handle_path /api/* {
+    handle /api/* {
         reverse_proxy n8n:5678
     }
     
-    handle_path /healthz {
+    handle /healthz {
         reverse_proxy n8n:5678
     }
     
