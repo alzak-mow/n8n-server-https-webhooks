@@ -132,15 +132,17 @@ services:
     hostname: caddy
     networks: ['n8n-network']
     restart: unless-stopped
+    env_file:
+      - .env
     ports:
       # If host 80/443 are in use, set CADDY_HTTP_PORT and CADDY_HTTPS_PORT in .env (e.g. 8080, 8443)
       - "${CADDY_HTTP_PORT:-80}:80"   # HTTP (redirect to HTTPS)
       - "${CADDY_HTTPS_PORT:-443}:443" # HTTPS
       - "${CADDY_HTTPS_PORT:-443}:443/udp" # HTTP/3 (QUIC)
     environment:
-      # N8N_DOMAIN — только hostname без порта (для Caddy server block)
-      - N8N_DOMAIN=${N8N_DOMAIN}
-      - ACME_EMAIL=admin@${N8N_DOMAIN}
+      # N8N_DOMAIN — hostname для Caddy (без порта). Если не задан, подставляется N8N_HOST
+      - N8N_DOMAIN=${N8N_DOMAIN:-${N8N_HOST}}
+      - ACME_EMAIL=admin@${N8N_DOMAIN:-${N8N_HOST}}
     volumes:
       - ./caddy/Caddyfile.server:/etc/caddy/Caddyfile:ro
       - caddy_data:/data
