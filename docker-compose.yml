@@ -33,12 +33,13 @@ x-n8n: &service-n8n
     - N8N_USER_MANAGEMENT_JWT_SECRET=${N8N_USER_MANAGEMENT_JWT_SECRET}
     - N8N_DEFAULT_BINARY_DATA_MODE=filesystem
     
-    # Webhook и URL configuration
     - N8N_HOST=${N8N_HOST}
     - N8N_PROTOCOL=https
     - N8N_EDITOR_BASE_URL=${N8N_EDITOR_BASE_URL}
     - WEBHOOK_URL=${WEBHOOK_URL}
     - N8N_SECURE_COOKIE=${N8N_SECURE_COOKIE:-true}
+    - N8N_PROXY_HOPS=1
+    - N8N_LOG_LEVEL=debug
     
     # Timezone
     - TZ=${TZ:-Europe/Moscow}

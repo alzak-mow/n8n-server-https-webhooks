@@ -13,7 +13,8 @@
     }
         
     # Важно: обработка webhook путей ДО основного прокси
-    handle_path /webhook/* {
+    # Используем handle (не handle_path), чтобы полный путь передавался в n8n
+    handle /webhook/* {
         reverse_proxy n8n:5678 {
             header_up Host {host}
             header_up X-Real-IP {remote_host}
@@ -22,7 +23,7 @@
         }
     }
     
-    handle_path /webhook-test/* {
+    handle /webhook-test/* {
         reverse_proxy n8n:5678 {
             header_up Host {host}
             header_up X-Real-IP {remote_host}
@@ -56,17 +57,12 @@
     header {
         Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
         X-Content-Type-Options nosniff
+        X-Forwarded-Proto https
         X-Frame-Options DENY
         X-XSS-Protection "1; mode=block"
         Referrer-Policy "strict-origin-when-cross-origin"
         -Server
     }
-    # Важно: заголовки для правильной передачи протокола
-    header {
-        X-Forwarded-Proto https
-    }
-    
-    encode gzip zstd
 }
 
 # Обработка HTTP -> HTTPS редиректа
