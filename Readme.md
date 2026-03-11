@@ -1,82 +1,134 @@
-Структура проекта
+# n8n-server
 
-n8n-docker/
-├── .env
-├── docker-compose.yml
+Готовый стек для развёртывания [n8n](https://n8n.io) с PostgreSQL и Caddy: автоматический HTTPS (Let's Encrypt), хранение данных в БД и на диске.
+
+## Содержимое
+
+- **n8n** — оркестрация воркфлоу (последний образ)
+- **PostgreSQL 16** — база данных
+- **Caddy 2** — reverse proxy, TLS из коробки, HTTP/3
+
+## Требования
+
+- Docker и Docker Compose (v2+)
+- Домен с DNS, указывающим на ваш сервер (для Let's Encrypt)
+- Порты 80 и 443 свободны (или настраиваемые через переменные)
+
+## Структура проекта
+
+```
+n8n-server/
+├── .env                 # Ваши настройки (не коммитить)
+├── .env-example         # Шаблон переменных окружения
+├── docker-compose.yml   # Сервисы: postgres, n8n, n8n-import, caddy
 ├── caddy/
-│   └── Caddyfile.server
+│   └── Caddyfile.server # Конфиг Caddy (домен из .env)
 ├── data/
-│   └── postgres/
+│   └── postgres/        # Данные PostgreSQL (создаётся при первом запуске)
 ├── n8n/
-│   └── demo-data/
+│   └── demo-data/       # Опционально: credentials/, workflows/ для импорта
 │       ├── credentials/
 │       └── workflows/
-└── shared/
+└── shared/              # Общая папка для файлов воркфлоу
+```
 
+## Быстрый старт
 
-1. Клонируем структуру проекта
+### 1. Клонирование и настройка окружения
 
-mkdir -p n8n-docker/{caddy,data/postgres,n8n/demo-data/{credentials,workflows},shared}
-cd n8n-docker
+```bash
+git clone https://github.com/alzak-mow/n8n-server-https-webhooks
+cd n8n-server
+cp .env-example .env
+```
 
+### 2. Редактирование `.env`
 
-# Генерация случайных ключей (опционально)
-openssl rand -hex 16  # Для N8N_ENCRYPTION_KEY
-openssl rand -hex 32  # Для N8N_USER_MANAGEMENT_JWT_SECRET
+Обязательно задайте:
 
----
+- `POSTGRES_PASSWORD` — пароль БД
+- `N8N_ENCRYPTION_KEY` и `N8N_USER_MANAGEMENT_JWT_SECRET` — секреты n8n
+- `N8N_DOMAIN`, `N8N_HOST`, `N8N_EDITOR_BASE_URL`, `WEBHOOK_URL` — ваш домен (см. раздел «Переменные окружения»)
 
-## Проверка конфигурации после деплоя
+Генерация случайных ключей:
+
+```bash
+openssl rand -hex 16   # для N8N_ENCRYPTION_KEY
+openssl rand -hex 32   # для N8N_USER_MANAGEMENT_JWT_SECRET
+```
+
+### 3. Запуск
+
+```bash
+docker compose up -d
+```
+
+Проверка статуса:
+
+```bash
+docker compose ps
+```
+
+Все сервисы должны быть в состоянии `Up`, postgres и n8n — `healthy`.
+
+## Переменные окружения
+
+Файл `.env` задаёт настройки стека. Ниже список переменных (по образцу `.env-example`).
+
+| Переменная | Описание | Пример |
+|------------|----------|--------|
+| **PostgreSQL** | | |
+| `POSTGRES_DATA_PATH` | Путь к данным БД на хосте | `./data/postgres` |
+| `POSTGRES_USER` | Пользователь PostgreSQL | `n8n_user` |
+| `POSTGRES_PASSWORD` | Пароль PostgreSQL | задать свой |
+| `POSTGRES_DB` | Имя базы | `n8n_db` |
+| **n8n** | | |
+| `N8N_ENCRYPTION_KEY` | Ключ шифрования (32 hex-символа) | сгенерировать |
+| `N8N_USER_MANAGEMENT_JWT_SECRET` | Секрет JWT (64 hex-символа) | сгенерировать |
+| `N8N_DOMAIN` | Домен для Caddy (только hostname) | `example.com` |
+| `N8N_HOST` | Домен (с портом, если не 443) | `example.com` или `example.com:8443` |
+| `N8N_EDITOR_BASE_URL` | URL редактора n8n | `https://example.com` |
+| `WEBHOOK_URL` | Базовый URL для webhook | `https://example.com` |
+| `N8N_SECURE_COOKIE` | Безопасные cookie (для HTTPS — `true`) | `true` или `false` |
+| **Caddy** | | |
+| `CADDY_HTTP_PORT` | Порт HTTP на хосте (опционально) | `80` (по умолчанию) |
+| `CADDY_HTTPS_PORT` | Порт HTTPS на хосте (опционально) | `443` (по умолчанию) |
+| **Прочее** | | |
+| `TZ` | Часовой пояс | `Europe/Moscow` |
+
+Если порты 80/443 заняты, задайте, например: `CADDY_HTTP_PORT=8080`, `CADDY_HTTPS_PORT=8443` и в n8n-переменных укажите домен с портом: `N8N_HOST=example.com:8443`, `N8N_EDITOR_BASE_URL=https://example.com:8443`, `WEBHOOK_URL=https://example.com:8443`.
+
+## Проверка после деплоя
 
 1. **Контейнеры и здоровье**
+
    ```bash
    docker compose ps
    ```
-   Все сервисы (postgres, n8n, caddy) должны быть `Up` и (где есть) `healthy`.
+   Все сервисы (postgres, n8n, caddy) — `Up`, где есть healthcheck — `healthy`.
 
 2. **Логи Caddy**
+
    ```bash
    docker compose logs caddy --tail 50
    ```
-   Не должно быть ошибок TLS/ACME; при первом запросе к домену появится получение сертификата Let's Encrypt.
+   Не должно быть ошибок TLS/ACME; при первом заходе на домен Caddy получит сертификат Let's Encrypt.
 
 3. **Доступ к n8n**
-   - В браузере: `https://ВАШ_ДОМЕН` (или `https://ВАШ_ДОМЕН:8443`, если задан `CADDY_HTTPS_PORT=8443`).
-   - Health n8n через Caddy: `curl -k https://ВАШ_ДОМЕН/healthz` — должен вернуть 200.
+
+   В браузере: `https://ВАШ_ДОМЕН` (или `https://ВАШ_ДОМЕН:8443`, если используете нестандартный порт).
+
+   Проверка health через Caddy:
+
+   ```bash
+   curl -k https://ВАШ_ДОМЕН/healthz
+   ```
+   Ожидается ответ с кодом 200.
 
 4. **Webhooks**
-   URL вебхуков в воркфлоу должны быть вида `https://ВАШ_ДОМЕН/webhook/...` (то же значение, что в `WEBHOOK_URL` в `.env`). Чтобы **Test URL** и **Production URL** в ноде Webhook совпадали, задайте в `.env` одинаковые `N8N_EDITOR_BASE_URL` и `WEBHOOK_URL` (или только `N8N_EDITOR_BASE_URL` — тогда `WEBHOOK_URL` подставится таким же).
 
-**Важно в `.env`:** при доступе через Caddy указывайте домен без порта 5678: `N8N_HOST=домен`, `N8N_EDITOR_BASE_URL=https://домен`, `WEBHOOK_URL=https://домен`. Переменная `N8N_DOMAIN` — hostname для Caddy (без порта); если не задана, подставляется `N8N_HOST`. При использовании нестандартного HTTPS-порта (например 8443) задайте `N8N_DOMAIN=домен` без порта, иначе Caddy может не запуститься.
+   URL вебхуков в воркфлоу должны быть вида `https://ВАШ_ДОМЕН/webhook/...` (то же значение, что в `WEBHOOK_URL`). Чтобы Test URL и Production URL в ноде Webhook совпадали, задайте в `.env` одинаковые `N8N_EDITOR_BASE_URL` и `WEBHOOK_URL`.
 
----
+## Лицензия
 
-## Ошибка «This site cannot provide a secure connection» / «sent an invalid response» (порт 8443)
-
-**Причина:** Let's Encrypt выдаёт сертификаты только после проверки по **порту 80** (HTTP-01). Если Caddy слушает только 8080 и 8443, проверка не проходит, сертификат не выдаётся (или используется самоподписанный) — браузер и клиенты не доверяют соединению.
-
-**Что сделать:**
-
-1. **Освободить порт 80** на сервере и дать Caddy слушать 80 и 443:
-   ```bash
-   sudo ss -tlnp | grep :80   # что заняло 80
-   sudo systemctl stop nginx  # или apache2, или другой сервис
-   ```
-   В `.env` закомментируйте или удалите строки:
-   ```bash
-   # CADDY_HTTP_PORT=8080
-   # CADDY_HTTPS_PORT=8443
-   ```
-   Перезапустите стек:
-   ```bash
-   docker compose down && docker compose up -d
-   ```
-   В `.env` переведите URL на стандартный HTTPS без порта:
-   ```bash
-   N8N_HOST=xqyx.ru
-   N8N_EDITOR_BASE_URL=https://xqyx.ru
-   WEBHOOK_URL=https://xqyx.ru
-   ```
-   После этого доступ и вебхуки: **https://xqyx.ru** (без :8443). Caddy получит сертификат Let's Encrypt, ошибка «secure connection» исчезнет.
-
-2. **Если порт 80 освободить нельзя** — нужна проверка домена через DNS (DNS-01). Это делается отдельной сборкой Caddy с DNS-провайдером и настройкой в Caddyfile (например, Cloudflare API). Для типичного деплоя проще освободить порт 80.
+Используйте по своему усмотрению. n8n, PostgreSQL и Caddy распространяются под своими лицензиями.
